@@ -1,18 +1,13 @@
-# Multi-stage build for faster builds
+# Builder stage
 FROM python:3.10-slim AS builder
 
-# Set working directory
 WORKDIR /app
 
-# Install only essential build dependencies
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
+# Install build dependencies
+RUN apt-get update && apt-get install -y build-essential && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first for better caching
+# Copy requirements and install
 COPY requirements-prod.txt requirements.txt
-
-# Install Python dependencies in a virtual environment
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 RUN pip install --no-cache-dir --upgrade pip && \
@@ -21,20 +16,19 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Production stage
 FROM python:3.10-slim
 
-# Set working directory 
 WORKDIR /app
 
-# Copy virtual environment from builder stage
+# Copy virtual environment from builder
 COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy only necessary application files
 COPY src/ ./src/
-COPY data/ ./data/
 COPY main.py .
+COPY download_data.py .  # Add your download script
 
-# Expose port 8080 (Cloud Run expects this)
+# Expose port 8080
 EXPOSE 8080
 
-# Start FastAPI with uvicorn
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8080"] 
+# Download data at container startup, then run the app
+CMD ["sh", "-c", "python download_data.py && uvicorn src.main:app --host=0.0.0.0 --port=8080"]

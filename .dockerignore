@@ -68,7 +68,3 @@ tests/
 # Development files
 check_progress.py
 test_api.py
-
-# Docker
-Dockerfile
-.dockerignore 
