@@ -25,7 +25,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Copy only necessary application files
 COPY src/ ./src/
 COPY main.py .
-COPY download_data.py .  # Add your download script
+COPY download_data.py .  
 
 # Expose port 8080
 EXPOSE 8080
