@@ -258,7 +258,7 @@ const Dashboard = () => {
             rel="noopener noreferrer"
             className="footer-link"
           >
-            Nithin Rokkam
+            Pigeon
           </a>
         </p>
       </footer>

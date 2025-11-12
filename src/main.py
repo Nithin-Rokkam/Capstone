@@ -63,11 +63,11 @@ class ArticleResponse(BaseModel):
 async def root():
     return {"message": "News Recommender API is running!"}
 
-@app.get("/health")
+@app.get("/api/health")
 async def health_check():
     return {"status": "healthy", "embeddings_loaded": len(recommender.news_ids) > 0}
 
-@app.post("/search")
+@app.post("/api/search")
 async def search_articles(request: SearchRequest):
     """
     Search for articles using NewsAPI
@@ -86,7 +86,7 @@ async def search_articles(request: SearchRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/recommend")
+@app.post("/api/recommend")
 async def get_recommendations(request: RecommendationRequest):
     """
     Get news recommendations based on query
@@ -149,7 +149,7 @@ async def get_recommendations(request: RecommendationRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/top-headlines")
+@app.get("/api/top-headlines")
 async def get_top_headlines(category: Optional[str] = None, country: str = "us"):
     """
     Get top headlines
@@ -165,7 +165,7 @@ async def get_top_headlines(category: Optional[str] = None, country: str = "us")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/trending")
+@app.get("/api/trending")
 async def get_trending_news(country: str = "us", page_size: int = 10, category: str = None, page: int = 1, language: str = "en"):
     """
     Get trending news of the day using the /everything endpoint for real pagination and variety.
