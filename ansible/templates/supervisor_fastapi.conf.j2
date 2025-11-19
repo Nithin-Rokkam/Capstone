@@ -1,0 +1,11 @@
+[program:news-recommender-api]
+command={{ venv_dir }}/bin/uvicorn src.main:app --host 0.0.0.0 --port 8000 --workers 4
+directory={{ app_dir }}
+user={{ app_user }}
+autostart=true
+autorestart=true
+redirect_stderr=true
+stdout_logfile=/var/log/news-recommender-api.log
+stdout_logfile_maxbytes=10MB
+stdout_logfile_backups=5
+environment=PATH="{{ venv_dir }}/bin",PYTHONPATH="{{ app_dir }}"
