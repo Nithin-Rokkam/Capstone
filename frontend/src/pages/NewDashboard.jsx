@@ -114,8 +114,12 @@ const NewDashboard = () => {
       const response = await axios.post('http://localhost:8000/api/recommend', {
         query: searchQuery
       });
-      setSearchResults(response.data.recommendations || []);
-      addToHistory(searchQuery, response.data.recommendations || []);
+      
+      // Only use live recommendations, ignore MIND dataset
+      const liveRecs = response.data.live_recommendations || [];
+      
+      setSearchResults(liveRecs);
+      addToHistory(searchQuery, liveRecs);
     } catch (error) {
       console.error('Error searching:', error);
       setSearchResults([]);

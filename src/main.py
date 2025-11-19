@@ -93,10 +93,10 @@ async def get_recommendations(request: RecommendationRequest):
     """
     try:
         if request.include_live:
-            # Pick a random page number between 1 and 5
-            page = random.randint(1, 5)
-            # Fetch more articles to ensure we have enough for recommendations
-            fetch_size = max(request.top_k * 10, 50)  # Fetch much more to ensure we get enough
+            # Use page 1 only for free tier compatibility
+            page = 1
+            # Limit page size to 20 for free tier (NewsAPI free tier max)
+            fetch_size = min(20, request.top_k * 2)  # Reasonable size for free tier
             live_articles = news_client.search_articles(
                 query=request.query,
                 page_size=fetch_size,
@@ -171,10 +171,14 @@ async def get_trending_news(country: str = "us", page_size: int = 10, category: 
     Get trending news of the day using the /everything endpoint for real pagination and variety.
     """
     try:
-        articles = news_client.get_trending_everything(category=category, language=language, page_size=page_size, page=page)
+        # Limit page size to 20 for free tier compatibility
+        safe_page_size = min(page_size, 20)
+        # Limit page number to 1 for free tier compatibility
+        safe_page = 1
+        articles = news_client.get_trending_everything(category=category, language=language, page_size=safe_page_size, page=safe_page)
         return {
             "category": category,
-            "page": page,
+            "page": safe_page,
             "articles": articles,
             "count": len(articles)
         }

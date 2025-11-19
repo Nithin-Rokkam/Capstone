@@ -24,9 +24,22 @@ class NewsAPIClient:
         
         try:
             headers = {"User-Agent": "Mozilla/5.0"}
+            print(f"Searching for: '{query}' with params: {params}")
             response = requests.get(url, params=params, headers=headers)
+            print(f"Search response status: {response.status_code}")
+            
+            # Handle specific status codes
+            if response.status_code == 426:
+                print(f"NewsAPI Free Tier Limitation: Upgrade required for query '{query}' with pageSize={page_size}, page={page}")
+                # Return empty list for 426 errors (free tier limitations)
+                return []
+            elif response.status_code == 429:
+                print(f"NewsAPI Rate Limit Exceeded for query '{query}'")
+                return []
+            
             response.raise_for_status()
             data = response.json()
+            print(f"Search API Response status: {data.get('status')}, Total results: {data.get('totalResults', 0)}")
             
             if data['status'] == 'ok':
                 articles = []
@@ -50,9 +63,11 @@ class NewsAPIClient:
                             'url': article.get('url', ''),
                             'publishedAt': article.get('publishedAt', ''),
                             'source': article.get('source', {}).get('name', ''),
+                            'urlToImage': article.get('urlToImage', ''),
                             'combined_text': combined_text.strip()
                         })
                 
+                print(f"Search returning {len(articles)} valid articles")
                 return articles
             else:
                 print(f"API Error: {data.get('message', 'Unknown error')}")
@@ -129,9 +144,21 @@ class NewsAPIClient:
             params['q'] += f' {category}'
         try:
             headers = {"User-Agent": "Mozilla/5.0"}
+            print(f"Making request to: {url} with params: {params}")
             response = requests.get(url, params=params, headers=headers)
+            print(f"Response status: {response.status_code}")
+            
+            if response.status_code == 426:
+                print(f"NewsAPI Free Tier Limitation: Upgrade required")
+                return []
+            elif response.status_code == 429:
+                print(f"NewsAPI Rate Limit Exceeded")
+                return []
+            
             response.raise_for_status()
             data = response.json()
+            print(f"API Response status: {data.get('status')}, Total results: {data.get('totalResults', 0)}")
+            
             if data['status'] == 'ok':
                 articles = []
                 for article in data['articles']:
@@ -141,15 +168,20 @@ class NewsAPIClient:
                     combined_text = f"{title}. {description}"
                     if content and len(combined_text) < 200:
                         combined_text += f" {content}"
-                    articles.append({
-                        'title': title,
-                        'description': description,
-                        'content': content,
-                        'url': article.get('url', ''),
-                        'publishedAt': article.get('publishedAt', ''),
-                        'source': article.get('source', {}).get('name', ''),
-                        'combined_text': combined_text.strip()
-                    })
+                    
+                    # Only add articles with valid content
+                    if title and title.strip() and description and description.strip():
+                        articles.append({
+                            'title': title,
+                            'description': description,
+                            'content': content,
+                            'url': article.get('url', ''),
+                            'publishedAt': article.get('publishedAt', ''),
+                            'source': article.get('source', {}).get('name', ''),
+                            'urlToImage': article.get('urlToImage', ''),
+                            'combined_text': combined_text.strip()
+                        })
+                print(f"Returning {len(articles)} valid articles")
                 return articles
             else:
                 print(f"API Error: {data.get('message', 'Unknown error')}")
