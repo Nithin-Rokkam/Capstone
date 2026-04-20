@@ -1,202 +1,152 @@
 # News Recommender Enhanced API
 
-A sophisticated news recommendation system that combines SBERT embeddings with RSS feed integration to provide personalized news recommendations.
+FastAPI + React news recommender with user auth, profile/location, interests/history/bookmarks, and personalized feed ranking using live NewsData results.
 
-## Features
+## Current Status
 
-- **Content-Based Recommendations**: Uses SBERT embeddings to find semantically similar articles
-- **Live News Integration**: Fetches real-time news from RSS feeds
-- **Hybrid Approach**: Combines pre-trained embeddings with live article recommendations
-- **FastAPI Backend**: RESTful API with automatic documentation
-- **Semantic Search**: Advanced NLP-based similarity matching
+- Live news source: NewsData API
+- Backend: FastAPI on default port 8001
+- Frontend: Vite React app
+- Auth: JWT-based sign-in/sign-up
+- Persistence: MySQL via SQLAlchemy
+- Feed behavior: personalized lead + general mix, dedupe, source balancing, pagination
 
-## Architecture
+## Core Features
 
-1. **Data Processing**: MIND dataset preprocessing and embedding generation
-2. **Recommendation Engine**: SBERT + Cosine Similarity for content-based recommendations
-3. **RSS Feed Integration**: Real-time news fetching from multiple RSS sources
-4. **FastAPI Server**: RESTful endpoints for recommendations
+- User authentication with JWT access tokens
+- Profile updates and location management
+- Per-user interests, search history, and bookmarks
+- Personalized feed endpoint with:
+  - deduplication across title/description/url
+  - source diversity capping
+  - page/per_page pagination
+  - in-memory cache fallback (API-sourced only)
+  - upstream retry/backoff buffering for rate-limit resilience
+- Explore search and trending headlines endpoints
 
-## Setup Instructions
+## Tech Stack
 
-### 1. Environment Setup
+- Python 3.11+
+- FastAPI, Pydantic, SQLAlchemy, bcrypt, python-jose
+- sentence-transformers (SBERT scoring support)
+- MySQL (PyMySQL driver)
+- React + Vite + Axios
+
+## Quick Start
+
+### 1. Install Backend Dependencies
 
 ```powershell
-# Create virtual environment
-python -m venv newsrec-env
-
-# Activate environment (Windows PowerShell)
-.\newsrec-env\Scripts\activate
-
-# Install dependencies
+python -m venv .venv
+.\.venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 2. Data Preparation
+### 2. Configure Environment Variables
+
+Create a local `.env` in project root (this file is ignored by git):
+
+```env
+# Required
+NEWSDATA_API_KEY=your-newsdata-api-key
+JWT_SECRET_KEY=replace-with-a-strong-secret
+
+# Optional (LLM categorization)
+OPENAI_API_KEY=
+
+# Database (defaults shown)
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_DB=news_recommender_db
+MYSQL_USER=root
+MYSQL_PASSWORD=
+```
+
+### 3. Start Backend
 
 ```powershell
-# Preprocess MIND dataset
-python src/data_preprocessing.py
-
-# Generate embeddings (this may take a while)
-python src/embed_articles.py
+python .\start_backend.py
 ```
 
-### 3. Test the System
+Backend URL: http://localhost:8001
+
+### 4. Start Frontend
 
 ```powershell
-# Run tests to verify everything works
-python test_api.py
+cd frontend
+npm install
+npm run dev
 ```
 
-### 4. Start the API Server
+Frontend usually runs on: http://localhost:5173
 
-```powershell
-# Start the FastAPI server
-python src/main.py
-```
+## API Docs
 
-The API will be available at: http://localhost:8000
+- Swagger UI: http://localhost:8001/docs
+- ReDoc: http://localhost:8001/redoc
+- Health: http://localhost:8001/api/health
 
-## API Endpoints
+## Important Endpoints
 
-### Health Check
-- **GET** `/health` - Check system status and embeddings
+### Auth
 
-### Search Articles
-- **POST** `/search` - Search for articles using RSS feeds
-- **GET** `/top-headlines` - Get top headlines by category
+- POST `/api/auth/signup`
+- POST `/api/auth/signin`
 
-### RSS Feed Categories
-- **GET** `/categories` - Get available news categories
-- **GET** `/feeds/{category}` - Get RSS feed URLs for a category
-- **POST** `/cache/clear` - Clear deduplication cache
+### Personalized Feed and Discovery
 
-### Recommendations
-- **POST** `/recommend` - Get personalized news recommendations
+- POST `/api/feed`
+- POST `/api/recommend`
+- POST `/api/search`
+- GET `/api/trending`
+- POST `/api/headlines`
 
-## Usage Examples
+### User Data
 
-### 1. Get Recommendations
+- GET/PUT `/api/users/{email}/profile`
+- GET/PUT `/api/users/{email}/location`
+- GET/PUT `/api/users/{email}/interests`
+- GET/POST/DELETE `/api/users/{email}/history`
+- GET/POST/DELETE `/api/users/{email}/bookmarks`
 
-```bash
-curl -X POST "http://localhost:8000/recommend" \
-     -H "Content-Type: application/json" \
-     -d '{
-       "query": "artificial intelligence in healthcare",
-       "top_k": 10,
-       "include_live": true,
-       "include_mind": true
-     }'
-```
+## Security and Push Safety
 
-### 2. Search Articles
+- Do not hardcode API keys or DB passwords in code.
+- Use `.env` for secrets.
+- `.gitignore` already excludes:
+  - `.env`, `.env.*`, `frontend/.env`
+  - local DB artifacts (`*.db`, `*.sqlite*`, `db_dumps/`)
+  - virtual envs and build/cache outputs
+  - cert/key files (`*.pem`, `*.key`, `*.crt`, `*.p12`)
 
-```bash
-curl -X POST "http://localhost:8000/search" \
-     -H "Content-Type: application/json" \
-     -d '{
-       "query": "climate change",
-       "top_k": 5,
-       "language": "en"
-     }'
-```
-
-### 3. Get Top Headlines
-
-```bash
-curl "http://localhost:8000/top-headlines?category=technology&country=us"
-```
-
-## API Documentation
-
-Once the server is running, visit:
-- **Interactive API Docs**: http://localhost:8000/docs
-- **Alternative Docs**: http://localhost:8000/redoc
-
-## Project Structure
-
-```
-News-Recommender-Enhanced-API/
-├── data/                    # MIND datasets and processed data
-│   ├── MINDlarge_train/     # Training dataset
-│   ├── MINDlarge_dev/       # Validation dataset
-│   ├── MINDlarge_test/      # Test dataset
-│   ├── processed_news.csv   # Preprocessed articles
-│   └── news_embeddings.npz  # Pre-computed embeddings
-├── src/                     # Source code
-│   ├── data_preprocessing.py # Data preprocessing script
-│   ├── embed_articles.py    # Embedding generation script
-│   ├── rss_client.py        # RSS feed integration
-│   ├── newsapi_client.py    # Legacy NewsAPI integration (deprecated)
-│   ├── recommender.py       # Recommendation engine
-│   └── main.py             # FastAPI application
-├── test_api.py             # Test script
-├── requirements.txt        # Python dependencies
-└── README.md              # This file
-```
-
-## Technical Details
-
-### Recommendation Algorithm
-- **Embedding Model**: Sentence-BERT (all-MiniLM-L6-v2)
-- **Similarity Metric**: Cosine Similarity
-- **Data Sources**: MIND dataset + RSS feed articles
-- **Scoring**: similarity_score * 0.6 + recency_score * 0.4
-
-### Performance
-- **Embedding Generation**: ~1-2 minutes for MIND dataset
-- **Recommendation Speed**: <100ms per query
-- **API Response Time**: ~5-10s including RSS feed parsing (optimized)
-- **Deduplication**: Title, URL, and content similarity based
-- **Feed Parsing**: 2 feeds per category for optimal speed
-
-## RSS Feed Configuration
-
-### Supported Categories
-The system supports 12 news categories with 2 optimized RSS feeds each for faster parsing:
-- **Technology**: TechCrunch, Wired
-- **Business**: CNBC, Wall Street Journal
-- **Sports**: ESPN, BBC Sport
-- **Entertainment**: Variety, Hollywood Reporter
-- **Health**: BBC Health, WHO
-- **Science**: Science Daily, BBC Science
-- **Politics**: BBC Politics, Politico
-- **World**: BBC World, CNN World
-- **Finance**: Moneycontrol, Investing
-- **Lifestyle**: Vogue, GQ
-- **Travel**: Lonely Planet, CN Traveler
-- **Food**: Serious Eats, Epicurious
-
-### Feed Features
-- **Deduplication**: Automatic removal of duplicate articles
-- **Scoring Algorithm**: similarity_score * 0.6 + recency_score * 0.4
-- **Real-time Parsing**: Fresh content from RSS feeds
-
-### Model Configuration
-- **SBERT Model**: `all-MiniLM-L6-v2` (fast and accurate)
-- **Embedding Dimension**: 384
-- **Similarity Threshold**: Configurable per request
+If any key was ever committed previously, rotate it before production use.
 
 ## Troubleshooting
 
-### Common Issues
+- Backend starts but feed is empty:
+  - Check NewsData quota/rate-limit responses (429).
+  - Verify `NEWSDATA_API_KEY` is valid in `.env`.
+- Auth failures:
+  - Confirm `JWT_SECRET_KEY` exists.
+  - Ensure frontend sends `Authorization: Bearer <token>`.
+- Database errors:
+  - Confirm MySQL is reachable and env values are correct.
 
-1. **Embeddings not found**: Run `python src/embed_articles.py`
-2. **RSS feed errors**: Check feed URLs and network connectivity
-3. **Memory issues**: Reduce batch size in embedding generation
+## Project Structure (High Level)
 
-### Logs
-Check the console output for detailed error messages and system status.
-
-## Future Enhancements
-
-- User authentication and personalization
-- Advanced filtering options
-- Caching for improved performance
-- Web interface for easier interaction
-- Multi-language support
+```text
+News-Recommender-Enhanced-API/
+  src/
+    main.py               # FastAPI app and endpoints
+    newsdata_client.py    # NewsData integration and scoring
+    llm_categorizer.py    # Optional LLM-based categorization
+    database.py           # SQLAlchemy engine/session setup
+    models.py             # ORM models
+  frontend/
+    src/pages/            # Auth and dashboard pages
+  start_backend.py        # Local backend launcher (port 8001)
+```
 
 ## License
 
-This project is for educational and research purposes. 
+For educational and research use.
