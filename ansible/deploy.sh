@@ -127,7 +127,7 @@ get_deployment_variables() {
     
     read -p "Enter NewsAPI Key (or press Enter to use default): " NEWSAPI_KEY
     if [ -z "$NEWSAPI_KEY" ]; then
-        NEWSAPI_KEY="d4c96b43d3c04883a2790bd6c78d0117"
+        NEWSAPI_KEY="YOUR_NEWSAPI_KEY"
     fi
     
     read -p "Enter GitHub repository URL (or press Enter to skip): " GITHUB_REPO

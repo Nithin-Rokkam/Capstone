@@ -5,6 +5,7 @@ This guide walks you through deploying the News Recommender API to AWS EC2 using
 ## Prerequisites
 
 ### 1. AWS EC2 Setup
+
 - **Instance Type**: t3.medium or larger (recommended for ML models)
 - **OS**: Amazon Linux 2 or Ubuntu 20.04+
 - **Storage**: At least 50GB (for MIND dataset)
@@ -14,6 +15,7 @@ This guide walks you through deploying the News Recommender API to AWS EC2 using
 ### 2. Local Machine Setup
 
 #### Install Ansible
+
 ```bash
 # Windows (using WSL or Git Bash)
 pip install ansible
@@ -28,6 +30,7 @@ sudo yum install ansible
 ```
 
 #### Install AWS CLI (optional, for managing instances)
+
 ```bash
 pip install awscli
 ```
@@ -37,17 +40,19 @@ pip install awscli
 ### Step 1: Prepare Ansible Configuration
 
 1. **Copy your PEM key to the ansible directory**
+
    ```bash
    cp /path/to/newsrec.pem ansible/newsrec.pem
    chmod 600 ansible/newsrec.pem
    ```
 
 2. **Update inventory.ini with your EC2 instance**
+
    ```ini
    [aws_ec2]
    news-recommender-server ansible_host=YOUR_EC2_IP ansible_user=ec2-user
    ```
-   
+
    Replace `YOUR_EC2_IP` with your actual EC2 instance public IP.
 
 3. **Verify SSH connection**
@@ -61,25 +66,28 @@ Create a file `ansible/vars.yml` with your configuration:
 
 ```yaml
 ---
-newsapi_api_key: "d4c96b43d3c04883a2790bd6c78d0117"
+newsapi_api_key: "YOUR_NEWSAPI_KEY"
 github_repo: "https://github.com/YOUR_USERNAME/News-Recommender-Enhanced-API.git"
 ```
 
 ### Step 3: Run Ansible Playbook
 
 #### Option A: Basic Deployment
+
 ```bash
 cd ansible
 ansible-playbook deploy.yml -i inventory.ini
 ```
 
 #### Option B: With Variables File
+
 ```bash
 cd ansible
 ansible-playbook deploy.yml -i inventory.ini -e @vars.yml
 ```
 
 #### Option C: With Inline Variables
+
 ```bash
 cd ansible
 ansible-playbook deploy.yml -i inventory.ini \
@@ -90,16 +98,19 @@ ansible-playbook deploy.yml -i inventory.ini \
 ### Step 4: Verify Deployment
 
 1. **Check API Health**
+
    ```bash
    curl http://YOUR_EC2_IP/api/health
    ```
 
 2. **Access API Documentation**
+
    ```
    http://YOUR_EC2_IP/docs
    ```
 
 3. **Check Application Logs**
+
    ```bash
    ssh -i ansible/newsrec.pem ec2-user@YOUR_EC2_IP
    sudo tail -f /var/log/news-recommender-api.log
@@ -141,15 +152,18 @@ ansible-playbook deploy.yml -i inventory.ini \
 ## Configuration Files
 
 ### inventory.ini
+
 - Defines EC2 hosts and connection parameters
 - Specifies SSH key and user
 
 ### deploy.yml
+
 - Main Ansible playbook
 - Contains all deployment tasks
 - Uses Jinja2 templates for configuration
 
 ### Templates (in ansible/templates/)
+
 - `env.j2`: Environment variables
 - `supervisor_fastapi.conf.j2`: Supervisor configuration
 - `nginx.conf.j2`: Nginx reverse proxy configuration
@@ -157,6 +171,7 @@ ansible-playbook deploy.yml -i inventory.ini \
 ## Troubleshooting
 
 ### SSH Connection Issues
+
 ```bash
 # Test SSH connection
 ssh -i ansible/newsrec.pem -v ec2-user@YOUR_EC2_IP
@@ -168,6 +183,7 @@ ssh -i ansible/newsrec.pem -v ec2-user@YOUR_EC2_IP
 ```
 
 ### Ansible Connection Issues
+
 ```bash
 # Test Ansible connectivity
 ansible all -i inventory.ini -m ping
@@ -179,6 +195,7 @@ ansible all -i inventory.ini -m ping
 ```
 
 ### Application Issues
+
 ```bash
 # SSH into instance
 ssh -i ansible/newsrec.pem ec2-user@YOUR_EC2_IP
@@ -198,7 +215,9 @@ sudo tail -f /var/log/nginx/news-recommender-error.log
 ```
 
 ### Data Download Issues
+
 If the MIND dataset download fails or times out:
+
 ```bash
 # SSH into instance
 ssh -i ansible/newsrec.pem ec2-user@YOUR_EC2_IP
@@ -215,6 +234,7 @@ sudo supervisorctl restart news-recommender-api
 ## Post-Deployment
 
 ### 1. Set Up SSL/TLS (Optional but Recommended)
+
 ```bash
 # SSH into instance
 ssh -i ansible/newsrec.pem ec2-user@YOUR_EC2_IP
@@ -227,6 +247,7 @@ sudo certbot --nginx -d your-domain.com
 ```
 
 ### 2. Set Up Monitoring
+
 ```bash
 # Check application status
 curl http://YOUR_EC2_IP/api/health
@@ -237,6 +258,7 @@ sudo tail -f /var/log/news-recommender-api.log
 ```
 
 ### 3. Configure Auto-Scaling (Optional)
+
 - Use AWS Auto Scaling Groups
 - Set up CloudWatch alarms
 - Configure load balancing
@@ -251,6 +273,7 @@ ansible-playbook deploy.yml -i inventory.ini -e "force_update=true"
 ```
 
 Or manually:
+
 ```bash
 ssh -i ansible/newsrec.pem ec2-user@YOUR_EC2_IP
 cd /home/newsrec/news-recommender-api
@@ -276,13 +299,17 @@ sudo supervisorctl restart news-recommender-api
 ## Performance Tuning
 
 ### Increase Workers
+
 Edit `/etc/supervisor/conf.d/news-recommender-api.conf`:
+
 ```
 command=/home/newsrec/news-recommender-api/venv/bin/uvicorn src.main:app --host 0.0.0.0 --port 8000 --workers 8
 ```
 
 ### Increase Nginx Worker Processes
+
 Edit `/etc/nginx/nginx.conf`:
+
 ```
 worker_processes auto;
 ```
@@ -298,6 +325,7 @@ worker_processes auto;
    - Never commit secrets to Git
 
 3. **Enable Firewall**
+
    ```bash
    sudo firewall-cmd --permanent --add-service=http
    sudo firewall-cmd --permanent --add-service=https
@@ -313,6 +341,7 @@ worker_processes auto;
 ## Support
 
 For issues or questions:
+
 1. Check the logs: `/var/log/news-recommender-api.log`
 2. Verify EC2 security groups
 3. Test API endpoints manually

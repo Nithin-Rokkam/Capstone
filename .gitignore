@@ -11,10 +11,21 @@ __pycache__/
 # Virtual environment
 newsrec-env/
 venv/
+.venv/
 .env
+.env.*
+!.env.example
 
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
+
+# Python tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
 
 # Data and model files
 data/
@@ -26,6 +37,13 @@ data/
 *.ckpt
 *.pt
 *.log
+
+# Local database artifacts
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+db_dumps/
 
 # VSCode
 .vscode/
@@ -48,3 +66,9 @@ yarn-error.log*
 # Misc
 *.swp
 *.swo 
+
+# Secrets and local cert/key material
+*.pem
+*.key
+*.crt
+*.p12

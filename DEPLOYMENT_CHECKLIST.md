@@ -5,6 +5,7 @@ Use this checklist to ensure a smooth deployment to AWS EC2.
 ## Pre-Deployment
 
 ### AWS EC2 Setup
+
 - [ ] Created EC2 instance (Amazon Linux 2 or Ubuntu 20.04+)
 - [ ] Instance type: t3.medium or larger
 - [ ] Storage: At least 50GB
@@ -16,12 +17,14 @@ Use this checklist to ensure a smooth deployment to AWS EC2.
   - [ ] Port 443 (HTTPS - for future)
 
 ### Local Machine Setup
+
 - [ ] Python 3.7+ installed
 - [ ] Ansible installed: `pip install ansible`
 - [ ] SSH client available (built-in on Linux/Mac, Git Bash on Windows)
 - [ ] Git installed (for cloning repo)
 
 ### Repository Preparation
+
 - [ ] Cloned News Recommender API repository
 - [ ] Navigated to project root directory
 - [ ] Verified `ansible/` directory exists
@@ -34,6 +37,7 @@ Use this checklist to ensure a smooth deployment to AWS EC2.
 ## Configuration
 
 ### PEM Key Setup
+
 - [ ] Copied PEM key to `ansible/newsrec.pem`
 - [ ] Set correct permissions: `chmod 600 ansible/newsrec.pem`
 - [ ] Tested SSH connection:
@@ -42,6 +46,7 @@ Use this checklist to ensure a smooth deployment to AWS EC2.
   ```
 
 ### Inventory Configuration
+
 - [ ] Opened `ansible/inventory.ini`
 - [ ] Replaced `YOUR_EC2_IP` with actual EC2 public IP
 - [ ] Verified SSH user:
@@ -50,13 +55,15 @@ Use this checklist to ensure a smooth deployment to AWS EC2.
 - [ ] Saved file
 
 ### Environment Variables
-- [ ] Noted NewsAPI key: `d4c96b43d3c04883a2790bd6c78d0117`
+
+- [ ] Noted GNews API key: `YOUR_GNEWS_API_KEY`
 - [ ] (Optional) Created GitHub repository for code
 - [ ] (Optional) Updated GitHub URL in deployment command
 
 ## Pre-Deployment Verification
 
 ### Connectivity Tests
+
 - [ ] SSH connection works:
   ```bash
   ssh -i ansible/newsrec.pem ec2-user@YOUR_EC2_IP "echo 'Connected'"
@@ -68,6 +75,7 @@ Use this checklist to ensure a smooth deployment to AWS EC2.
   ```
 
 ### File Verification
+
 - [ ] All required files present in `ansible/` directory
 - [ ] Templates directory has 3 files
 - [ ] `deploy.yml` is readable
@@ -78,6 +86,7 @@ Use this checklist to ensure a smooth deployment to AWS EC2.
 ### Choose Deployment Method
 
 #### Option A: Automated Script (Recommended)
+
 - [ ] Windows (PowerShell):
   ```powershell
   cd ansible
@@ -91,15 +100,17 @@ Use this checklist to ensure a smooth deployment to AWS EC2.
   ```
 
 #### Option B: Manual Ansible Command
+
 - [ ] Opened terminal/PowerShell
 - [ ] Navigated to `ansible/` directory
 - [ ] Ran command:
   ```bash
   ansible-playbook deploy.yml -i inventory.ini \
-    -e "newsapi_api_key=d4c96b43d3c04883a2790bd6c78d0117"
+    -e "newsapi_api_key=YOUR_NEWSAPI_KEY"
   ```
 
 ### During Deployment
+
 - [ ] Watched for any error messages
 - [ ] Noted any warnings
 - [ ] Deployment completed successfully
@@ -108,6 +119,7 @@ Use this checklist to ensure a smooth deployment to AWS EC2.
 ## Post-Deployment Verification
 
 ### API Health Check
+
 - [ ] Health endpoint responds:
   ```bash
   curl http://YOUR_EC2_IP/api/health
@@ -115,11 +127,13 @@ Use this checklist to ensure a smooth deployment to AWS EC2.
 - [ ] Response includes: `{"status": "healthy", ...}`
 
 ### API Documentation
+
 - [ ] Access Swagger docs: `http://YOUR_EC2_IP/docs`
 - [ ] All endpoints visible
 - [ ] Can expand endpoint details
 
 ### Test API Endpoints
+
 - [ ] Search endpoint works:
   ```bash
   curl -X POST http://YOUR_EC2_IP/api/search \
@@ -136,6 +150,7 @@ Use this checklist to ensure a smooth deployment to AWS EC2.
   ```
 
 ### Service Status
+
 - [ ] SSH into instance:
   ```bash
   ssh -i ansible/newsrec.pem ec2-user@YOUR_EC2_IP
@@ -156,18 +171,21 @@ Use this checklist to ensure a smooth deployment to AWS EC2.
 ## Troubleshooting (if needed)
 
 ### SSH Connection Issues
+
 - [ ] Verified EC2 IP is correct
 - [ ] Checked security group allows port 22
 - [ ] Verified PEM file permissions: `chmod 600`
 - [ ] Verified SSH user (ec2-user vs ubuntu)
 
 ### Ansible Issues
+
 - [ ] Ran: `ansible all -i inventory.ini -m ping`
 - [ ] Checked inventory.ini syntax
 - [ ] Verified SSH key path
 - [ ] Verified EC2 instance is running
 
 ### Application Issues
+
 - [ ] Checked logs: `sudo tail -f /var/log/news-recommender-api.log`
 - [ ] Restarted application: `sudo supervisorctl restart news-recommender-api`
 - [ ] Checked Nginx: `sudo systemctl status nginx`
@@ -176,21 +194,25 @@ Use this checklist to ensure a smooth deployment to AWS EC2.
 ## Post-Deployment Tasks
 
 ### Security
+
 - [ ] Restricted SSH access to your IP in security group
 - [ ] (Optional) Set up SSL/TLS certificate with Certbot
 - [ ] (Optional) Enable firewall rules
 
 ### Monitoring
+
 - [ ] Set up log monitoring
 - [ ] (Optional) Configure CloudWatch alarms
 - [ ] (Optional) Set up email alerts
 
 ### Frontend Deployment
+
 - [ ] Update API URL in frontend config
 - [ ] Deploy frontend to Vercel or Netlify
 - [ ] Test frontend with deployed API
 
 ### Documentation
+
 - [ ] Documented EC2 IP address
 - [ ] Documented deployment date
 - [ ] Documented any custom configurations
@@ -199,18 +221,21 @@ Use this checklist to ensure a smooth deployment to AWS EC2.
 ## Maintenance Checklist
 
 ### Regular Tasks
+
 - [ ] Monitor application logs weekly
 - [ ] Check disk usage monthly
 - [ ] Update system packages monthly
 - [ ] Review security group rules quarterly
 
 ### Backup & Recovery
+
 - [ ] (Optional) Set up automated backups
 - [ ] Document rollback procedure
 - [ ] Test rollback procedure
 - [ ] Keep PEM key in secure location
 
 ### Performance
+
 - [ ] Monitor API response times
 - [ ] Check CPU and memory usage
 - [ ] Increase workers if needed
@@ -250,17 +275,18 @@ sudo supervisorctl restart news-recommender-api
 
 ## Deployment Summary
 
-**Deployment Date:** _______________
+**Deployment Date:** ******\_\_\_******
 
-**EC2 Instance IP:** _______________
+**EC2 Instance IP:** ******\_\_\_******
 
-**Instance Type:** _______________
+**Instance Type:** ******\_\_\_******
 
-**OS:** _______________
+**OS:** ******\_\_\_******
 
 **Deployment Status:** ✅ Successful / ❌ Failed
 
 **Notes:**
+
 ```
 _________________________________________________________________
 
@@ -269,9 +295,9 @@ _________________________________________________________________
 _________________________________________________________________
 ```
 
-**Deployed By:** _______________
+**Deployed By:** ******\_\_\_******
 
-**Verified By:** _______________
+**Verified By:** ******\_\_\_******
 
 ---
 
@@ -289,6 +315,7 @@ _________________________________________________________________
 **Deployment Complete!** 🎉
 
 For support, refer to:
+
 - `QUICK_START_ANSIBLE.md` - Quick reference
 - `ANSIBLE_DEPLOYMENT_GUIDE.md` - Detailed guide
 - `ansible/README.md` - Ansible documentation

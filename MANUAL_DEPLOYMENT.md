@@ -46,6 +46,7 @@ ansible all -i inventory.ini -m ping
 ```
 
 Expected output:
+
 ```
 news-recommender-server | SUCCESS => {
     "changed": false,
@@ -56,7 +57,7 @@ news-recommender-server | SUCCESS => {
 ## Step 5: Run Deployment Playbook
 
 ```powershell
-ansible-playbook deploy.yml -i inventory.ini -e "newsapi_api_key=d4c96b43d3c04883a2790bd6c78d0117" -e "github_repo=https://github.com/YOUR_USERNAME/News-Recommender-Enhanced-API.git" -v
+ansible-playbook deploy.yml -i inventory.ini -e "newsapi_api_key=YOUR_NEWSAPI_KEY" -e "github_repo=https://github.com/YOUR_USERNAME/News-Recommender-Enhanced-API.git" -v
 ```
 
 Replace `YOUR_USERNAME` with your GitHub username.
@@ -81,6 +82,7 @@ ssh -i newsrec.pem ec2-user@3.109.199.44 "sudo tail -f /var/log/news-recommender
 **Issue:** `Permission denied (publickey)`
 
 **Solutions:**
+
 1. Wait 2-3 minutes for instance to initialize
 2. Verify PEM file permissions:
    ```powershell
@@ -94,6 +96,7 @@ ssh -i newsrec.pem ec2-user@3.109.199.44 "sudo tail -f /var/log/news-recommender
 **Issue:** `AttributeError: module 'os' has no attribute 'get_blocking'`
 
 **Solution:** Upgrade Ansible
+
 ```powershell
 pip install --upgrade ansible
 ```
@@ -103,24 +106,28 @@ pip install --upgrade ansible
 **Issue:** Playbook execution fails
 
 **Solutions:**
+
 1. Check instance logs:
+
    ```powershell
    ssh -i newsrec.pem ec2-user@3.109.199.44 "sudo tail -100 /var/log/news-recommender-api.log"
    ```
 
 2. Check Supervisor status:
+
    ```powershell
    ssh -i newsrec.pem ec2-user@3.109.199.44 "sudo supervisorctl status"
    ```
 
 3. Check Nginx status:
+
    ```powershell
    ssh -i newsrec.pem ec2-user@3.109.199.44 "sudo systemctl status nginx"
    ```
 
 4. Re-run playbook with more verbosity:
    ```powershell
-   ansible-playbook deploy.yml -i inventory.ini -e "newsapi_api_key=d4c96b43d3c04883a2790bd6c78d0117" -vvv
+   ansible-playbook deploy.yml -i inventory.ini -e "newsapi_api_key=YOUR_NEWSAPI_KEY" -vvv
    ```
 
 ### API Not Responding
@@ -128,13 +135,16 @@ pip install --upgrade ansible
 **Issue:** `curl http://3.109.199.44/api/health` times out
 
 **Solutions:**
+
 1. Wait 1-2 minutes for services to start
 2. Check if services are running:
+
    ```powershell
    ssh -i newsrec.pem ec2-user@3.109.199.44 "sudo supervisorctl status all"
    ```
 
 3. Check Nginx:
+
    ```powershell
    ssh -i newsrec.pem ec2-user@3.109.199.44 "sudo systemctl status nginx"
    ```
@@ -174,6 +184,7 @@ ssh -i newsrec.pem ec2-user@3.109.199.44 "sudo systemctl reload nginx"
 Once deployment is successful:
 
 1. **Test API endpoints:**
+
    ```
    http://3.109.199.44/api/health
    http://3.109.199.44/docs

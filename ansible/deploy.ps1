@@ -3,7 +3,7 @@
 
 param(
     [string]$EC2IP = "",
-    [string]$NewsAPIKey = "d4c96b43d3c04883a2790bd6c78d0117",
+    [string]$NewsAPIKey = "YOUR_NEWSAPI_KEY",
     [string]$GitHubRepo = "https://github.com/YOUR_USERNAME/News-Recommender-Enhanced-API.git",
     [switch]$SkipSSHTest = $false
 )

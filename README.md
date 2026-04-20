@@ -1,11 +1,11 @@
 # News Recommender Enhanced API
 
-A sophisticated news recommendation system that combines SBERT embeddings with live NewsAPI integration to provide personalized news recommendations.
+A sophisticated news recommendation system that combines SBERT embeddings with RSS feed integration to provide personalized news recommendations.
 
 ## Features
 
 - **Content-Based Recommendations**: Uses SBERT embeddings to find semantically similar articles
-- **Live News Integration**: Fetches real-time news from NewsAPI
+- **Live News Integration**: Fetches real-time news from RSS feeds
 - **Hybrid Approach**: Combines pre-trained embeddings with live article recommendations
 - **FastAPI Backend**: RESTful API with automatic documentation
 - **Semantic Search**: Advanced NLP-based similarity matching
@@ -14,7 +14,7 @@ A sophisticated news recommendation system that combines SBERT embeddings with l
 
 1. **Data Processing**: MIND dataset preprocessing and embedding generation
 2. **Recommendation Engine**: SBERT + Cosine Similarity for content-based recommendations
-3. **NewsAPI Integration**: Real-time news fetching with your API key
+3. **RSS Feed Integration**: Real-time news fetching from multiple RSS sources
 4. **FastAPI Server**: RESTful endpoints for recommendations
 
 ## Setup Instructions
@@ -64,8 +64,13 @@ The API will be available at: http://localhost:8000
 - **GET** `/health` - Check system status and embeddings
 
 ### Search Articles
-- **POST** `/search` - Search for articles using NewsAPI
+- **POST** `/search` - Search for articles using RSS feeds
 - **GET** `/top-headlines` - Get top headlines by category
+
+### RSS Feed Categories
+- **GET** `/categories` - Get available news categories
+- **GET** `/feeds/{category}` - Get RSS feed URLs for a category
+- **POST** `/cache/clear` - Clear deduplication cache
 
 ### Recommendations
 - **POST** `/recommend` - Get personalized news recommendations
@@ -122,7 +127,8 @@ News-Recommender-Enhanced-API/
 ├── src/                     # Source code
 │   ├── data_preprocessing.py # Data preprocessing script
 │   ├── embed_articles.py    # Embedding generation script
-│   ├── newsapi_client.py    # NewsAPI integration
+│   ├── rss_client.py        # RSS feed integration
+│   ├── newsapi_client.py    # Legacy NewsAPI integration (deprecated)
 │   ├── recommender.py       # Recommendation engine
 │   └── main.py             # FastAPI application
 ├── test_api.py             # Test script
@@ -135,17 +141,37 @@ News-Recommender-Enhanced-API/
 ### Recommendation Algorithm
 - **Embedding Model**: Sentence-BERT (all-MiniLM-L6-v2)
 - **Similarity Metric**: Cosine Similarity
-- **Data Sources**: MIND dataset + NewsAPI live articles
+- **Data Sources**: MIND dataset + RSS feed articles
+- **Scoring**: similarity_score * 0.6 + recency_score * 0.4
 
 ### Performance
 - **Embedding Generation**: ~1-2 minutes for MIND dataset
 - **Recommendation Speed**: <100ms per query
-- **API Response Time**: <500ms including NewsAPI calls
+- **API Response Time**: ~5-10s including RSS feed parsing (optimized)
+- **Deduplication**: Title, URL, and content similarity based
+- **Feed Parsing**: 2 feeds per category for optimal speed
 
-## Configuration
+## RSS Feed Configuration
 
-### NewsAPI Key
-The system uses your provided API key: `d4c96b43d3c04883a2790bd6c78d0117`
+### Supported Categories
+The system supports 12 news categories with 2 optimized RSS feeds each for faster parsing:
+- **Technology**: TechCrunch, Wired
+- **Business**: CNBC, Wall Street Journal
+- **Sports**: ESPN, BBC Sport
+- **Entertainment**: Variety, Hollywood Reporter
+- **Health**: BBC Health, WHO
+- **Science**: Science Daily, BBC Science
+- **Politics**: BBC Politics, Politico
+- **World**: BBC World, CNN World
+- **Finance**: Moneycontrol, Investing
+- **Lifestyle**: Vogue, GQ
+- **Travel**: Lonely Planet, CN Traveler
+- **Food**: Serious Eats, Epicurious
+
+### Feed Features
+- **Deduplication**: Automatic removal of duplicate articles
+- **Scoring Algorithm**: similarity_score * 0.6 + recency_score * 0.4
+- **Real-time Parsing**: Fresh content from RSS feeds
 
 ### Model Configuration
 - **SBERT Model**: `all-MiniLM-L6-v2` (fast and accurate)
@@ -157,7 +183,7 @@ The system uses your provided API key: `d4c96b43d3c04883a2790bd6c78d0117`
 ### Common Issues
 
 1. **Embeddings not found**: Run `python src/embed_articles.py`
-2. **NewsAPI errors**: Check your API key and rate limits
+2. **RSS feed errors**: Check feed URLs and network connectivity
 3. **Memory issues**: Reduce batch size in embedding generation
 
 ### Logs

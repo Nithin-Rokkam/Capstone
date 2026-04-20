@@ -3,16 +3,19 @@
 ## 5-Minute Setup
 
 ### Step 1: Install Ansible
+
 ```bash
 pip install ansible
 ```
 
 ### Step 2: Prepare Your EC2 Instance
+
 1. Launch an EC2 instance (Amazon Linux 2 or Ubuntu)
 2. Download the `.pem` key file
 3. Note the public IP address
 
 ### Step 3: Configure Ansible
+
 ```bash
 cd ansible
 
@@ -25,6 +28,7 @@ chmod 600 newsrec.pem
 ```
 
 Edit `ansible/inventory.ini`:
+
 ```ini
 [aws_ec2]
 news-recommender-server ansible_host=YOUR_EC2_IP ansible_user=ec2-user ansible_ssh_private_key_file=./newsrec.pem
@@ -33,12 +37,14 @@ news-recommender-server ansible_host=YOUR_EC2_IP ansible_user=ec2-user ansible_s
 ### Step 4: Run Deployment
 
 **Option A: Using PowerShell (Windows)**
+
 ```powershell
 cd ansible
 .\deploy.ps1
 ```
 
 **Option B: Using Bash (Linux/Mac)**
+
 ```bash
 cd ansible
 chmod +x deploy.sh
@@ -46,13 +52,15 @@ chmod +x deploy.sh
 ```
 
 **Option C: Manual Ansible Command**
+
 ```bash
 cd ansible
 ansible-playbook deploy.yml -i inventory.ini \
-  -e "newsapi_api_key=d4c96b43d3c04883a2790bd6c78d0117"
+   -e "newsapi_api_key=YOUR_NEWSAPI_KEY"
 ```
 
 ### Step 5: Verify Deployment
+
 ```bash
 # Check API health
 curl http://YOUR_EC2_IP/api/health
@@ -74,6 +82,7 @@ open http://YOUR_EC2_IP/docs
 ## Troubleshooting
 
 ### SSH Connection Failed
+
 ```bash
 # Test SSH manually
 ssh -i newsrec.pem ec2-user@YOUR_EC2_IP
@@ -85,6 +94,7 @@ ssh -i newsrec.pem ec2-user@YOUR_EC2_IP
 ```
 
 ### Ansible Connection Failed
+
 ```bash
 # Test Ansible connectivity
 ansible all -i inventory.ini -m ping
@@ -93,6 +103,7 @@ ansible all -i inventory.ini -m ping
 ```
 
 ### API Not Responding
+
 ```bash
 # SSH into instance
 ssh -i newsrec.pem ec2-user@YOUR_EC2_IP
@@ -110,6 +121,7 @@ sudo supervisorctl restart news-recommender-api
 ## Next Steps
 
 1. **Set up SSL/TLS** (recommended for production)
+
    ```bash
    ssh -i newsrec.pem ec2-user@YOUR_EC2_IP
    sudo certbot --nginx -d your-domain.com

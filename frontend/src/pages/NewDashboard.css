@@ -545,6 +545,12 @@
   margin-bottom: 2rem;
 }
 
+.load-more-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
 .results-title {
   font-size: 1.25rem;
   font-weight: 700;
@@ -805,9 +811,11 @@
 /* Right Side - Forms Grid */
 .profile-forms-grid {
   display: grid;
-  grid-template-rows: 1fr 1fr;
+  grid-auto-rows: minmax(0, auto);
   gap: 1.5rem;
   height: 100%;
+  overflow-y: auto;
+  padding-right: 0.25rem;
 }
 
 .profile-form-card {
@@ -867,13 +875,35 @@
   transition: all 0.2s ease;
 }
 
+.form-group select {
+  padding: 0.75rem 1rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  background: #ffffff;
+}
+
 .form-group input:focus {
   outline: none;
   border-color: #000000;
   box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
 }
 
+.form-group select:focus {
+  outline: none;
+  border-color: #000000;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+}
+
 .form-group input:disabled {
+  background: #f9fafb;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.form-group select:disabled {
   background: #f9fafb;
   color: #9ca3af;
   cursor: not-allowed;

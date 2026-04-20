@@ -5,7 +5,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2rem;
+  padding: 0;
   position: relative;
   overflow: hidden;
 }
@@ -67,25 +67,25 @@
 
 /* Container */
 .auth-container-new {
-  width: 100%;
-  max-width: 900px;
+  width: 100vw;
+  max-width: none;
   display: grid;
-  grid-template-columns: 40% 60%;
+  grid-template-columns: 46% 54%;
   background: #ffffff;
-  border: 2px solid #000000;
-  border-radius: 20px;
+  border: none;
+  border-radius: 0;
   overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
+  box-shadow: none;
   position: relative;
   z-index: 1;
-  min-height: 480px;
+  min-height: 100vh;
 }
 
 /* Left Panel - Branding */
 .auth-left-new {
   background: #000000;
   color: #ffffff;
-  padding: 2.5rem;
+  padding: 3rem;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -140,20 +140,36 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: flex-start;
+  gap: 1.35rem;
+  transform: translateY(-28px);
   z-index: 1;
 }
 
+.brand-top-row {
+  display: flex;
+  align-items: center;
+  gap: 1.15rem;
+  width: 100%;
+}
+
 .logo-large {
-  width: 64px;
-  height: 64px;
+  width: 215px;
+  height: 170px;
   background: #ffffff;
-  border-radius: 16px;
+  border-radius: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0;
   animation: pulse-logo 3s ease-in-out infinite;
-  padding: 8px;
+  padding: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
+}
+
+.brand-logo-frame {
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.35);
 }
 
 @keyframes pulse-logo {
@@ -174,17 +190,28 @@
 }
 
 .brand-title {
-  font-size: 2.5rem;
+  font-size: clamp(3.3rem, 6.4vw, 6rem);
   font-weight: 900;
-  margin-bottom: 0.5rem;
+  margin: 0;
   letter-spacing: -0.03em;
+  line-height: 0.9;
+  word-break: break-word;
 }
 
-.brand-tagline {
-  font-size: 1rem;
-  color: #cccccc;
-  margin-bottom: 0;
-  font-weight: 400;
+.brand-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  max-width: 92%;
+}
+
+.brand-line {
+  margin: 0;
+  color: #d7d7d7;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.06;
+  font-size: clamp(1.55rem, 3vw, 2.7rem);
 }
 
 @keyframes fade-in-up {
@@ -414,6 +441,56 @@
   font-size: 0.85rem;
 }
 
+.auth-extra-options {
+  margin-top: 0.75rem;
+}
+
+.signup-info-warning {
+  width: 100%;
+  background: #fff8e1;
+  border: 1px solid #f5c26b;
+  color: #7a5200;
+  border-radius: 10px;
+  padding: 0.7rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.location-fields-container {
+  margin-top: 0.5rem;
+  gap: 0.75rem;
+}
+
+.location-row-new {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.manual-location-input {
+  min-height: 52px;
+  font-size: 1rem;
+  padding: 0.9rem 1rem;
+}
+
+.location-search-input {
+  min-height: 42px;
+  font-size: 0.92rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  border-color: #d8d8d8;
+  margin-bottom: 0.25rem;
+}
+
+select.manual-location-input {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, #444 50%), linear-gradient(135deg, #444 50%, transparent 50%);
+  background-position: calc(100% - 18px) calc(50% - 3px), calc(100% - 12px) calc(50% - 3px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 2.2rem;
+}
+
 .form-options-new.full-width {
   justify-content: flex-start;
 }
@@ -546,5 +623,9 @@
 
   .form-title-new {
     font-size: 1.5rem;
+  }
+
+  .location-row-new {
+    grid-template-columns: 1fr;
   }
 }
