@@ -162,10 +162,10 @@ Project Root/
 │
 ├─ requirements.txt                  # Python dependencies
 ├─ main.py                           # Entry point
-├─ DEPLOYMENT_SUMMARY.md             # Deployment overview
+├─ README.md                         # Project overview
 ├─ QUICK_START_ANSIBLE.md            # Quick start guide
 ├─ ANSIBLE_DEPLOYMENT_GUIDE.md       # Detailed guide
-└─ DEPLOYMENT_CHECKLIST.md           # Deployment checklist
+└─ MANUAL_DEPLOYMENT.md              # Manual deployment guide
 ```
 
 ## Configuration Flow
@@ -390,6 +390,7 @@ Previous Version (v0.9)
 ---
 
 For more details, see:
+
 - `QUICK_START_ANSIBLE.md` - Quick start
 - `ANSIBLE_DEPLOYMENT_GUIDE.md` - Detailed guide
 - `ansible/README.md` - Ansible documentation
