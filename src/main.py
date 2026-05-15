@@ -2,7 +2,7 @@ import os
 from datetime import datetime, timedelta, timezone
 import hashlib
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, BackgroundTasks
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,9 +14,12 @@ from sqlalchemy.exc import ProgrammingError
 from typing import List, Optional, Union
 import json
 import asyncio
+from dotenv import load_dotenv
 from .newsdata_client import NewsDataClient
 from .database import get_db, init_db
 from .models import SavedArticle, SearchHistory, User, UserInterest, UserLocation
+
+load_dotenv()
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -454,7 +457,7 @@ def _store_cached_feed(cache_key: str, response_data: dict) -> None:
 
 
 @app.post("/api/feed")
-async def get_personalized_feed(request: SearchRequest, db: Session = Depends(get_db)):
+async def get_personalized_feed(request: SearchRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     try:
         interests = request.interests or []
         history_terms = _extract_history_terms(db, request.user_email)
@@ -477,164 +480,151 @@ async def get_personalized_feed(request: SearchRequest, db: Session = Depends(ge
         personalized_fetch_size = max(20, required_total + 12)
         general_fetch_size = max(30, required_total + 25)
 
-        async def _search_news_with_buffer(**kwargs) -> dict:
-            attempts = max(1, FEED_UPSTREAM_ATTEMPTS)
-            fallback_result = {
-                "status": "error",
-                "message": "No upstream response",
-                "articles": [],
-            }
-            retry_delay = max(0.0, FEED_UPSTREAM_RETRY_DELAY_SECONDS)
+        async def _fetch_and_cache_live_feed(is_background: bool = False) -> dict:
+            # If blocking the user (cache miss), fetch minimal pages for fast response.
+            # The background task will fetch the full deep cache.
+            p_fetch_size = personalized_fetch_size if is_background else 10
+            g_fetch_size = general_fetch_size if is_background else 10
 
-            for attempt_index in range(attempts):
-                result = news_client.search_news(**kwargs)
-                if result.get("status") != "error" and result.get("articles"):
-                    return result
+            async def _search_news_with_buffer(**kwargs) -> dict:
+                attempts = max(1, FEED_UPSTREAM_ATTEMPTS)
+                fallback_result = {
+                    "status": "error",
+                    "message": "No upstream response",
+                    "articles": [],
+                }
+                retry_delay = max(0.0, FEED_UPSTREAM_RETRY_DELAY_SECONDS)
 
-                fallback_result = result
-                if attempt_index < attempts - 1:
-                    await asyncio.sleep(retry_delay)
-                    retry_delay = retry_delay * max(1.0, FEED_UPSTREAM_BACKOFF_MULTIPLIER)
+                for attempt_index in range(attempts):
+                    result = await asyncio.to_thread(news_client.search_news, **kwargs)
+                    if result.get("status") != "error" and result.get("articles"):
+                        return result
 
-            return fallback_result
+                    message = (result.get("message") or "").lower()
+                    if "newsdata_api_key is missing" in message:
+                        return result
 
-        personalized_result = await _search_news_with_buffer(
-            query=focus_query,
-            interests=interests,
-            country=resolved_country,
-            language=request.language,
-            page_size=personalized_fetch_size,
-            page=1,
-            per_page=personalized_fetch_size,
-        )
-        personalized_error = personalized_result.get("status") == "error"
+                    fallback_result = result
+                    if attempt_index < attempts - 1:
+                        await asyncio.sleep(retry_delay)
+                        retry_delay = retry_delay * max(1.0, FEED_UPSTREAM_BACKOFF_MULTIPLIER)
 
-        general_result = {"status": "success", "articles": []}
-        general_error = False
+                return fallback_result
 
-        # If upstream is throttling, avoid a second request that will likely fail too.
-        if not personalized_error:
-            general_result = await _search_news_with_buffer(
-                query="latest news",
-                interests=None,
-                country=resolved_country,
-                language=request.language,
-                page_size=general_fetch_size,
-                page=1,
-                per_page=general_fetch_size,
+            personalized_task = asyncio.create_task(
+                _search_news_with_buffer(
+                    query=focus_query,
+                    interests=interests,
+                    country=resolved_country,
+                    language=request.language,
+                    page_size=p_fetch_size,
+                    page=1,
+                    per_page=p_fetch_size,
+                )
             )
-            general_error = general_result.get("status") == "error"
-        else:
-            personalized_message = (personalized_result.get("message") or "").lower()
-            if "429" not in personalized_message and "too many requests" not in personalized_message:
-                general_result = await _search_news_with_buffer(
+
+            general_task = asyncio.create_task(
+                _search_news_with_buffer(
                     query="latest news",
                     interests=None,
                     country=resolved_country,
                     language=request.language,
-                    page_size=general_fetch_size,
+                    page_size=g_fetch_size,
                     page=1,
-                    per_page=general_fetch_size,
+                    per_page=g_fetch_size,
                 )
-                general_error = general_result.get("status") == "error"
+            )
 
-        personalized_articles = sorted(
-            _dedupe_articles(personalized_result.get("articles", [])),
-            key=lambda item: item.get("final_score", 0),
-            reverse=True,
-        )
-        general_articles = _dedupe_articles(general_result.get("articles", []))
+            personalized_result, general_result = await asyncio.gather(personalized_task, general_task)
+            
+            personalized_error = personalized_result.get("status") == "error"
+            general_error = general_result.get("status") == "error"
 
-        personalized_lead = min(8, request.per_page)
-        if request.per_page >= 6:
-            personalized_lead = min(8, max(6, personalized_lead))
+            personalized_articles = sorted(
+                _dedupe_articles(personalized_result.get("articles", [])),
+                key=lambda item: item.get("final_score", 0),
+                reverse=True,
+            )
+            general_articles = _dedupe_articles(general_result.get("articles", []))
 
-        lead_personalized = _select_with_source_cap(
-            personalized_articles,
-            max_items=personalized_lead,
-            max_per_source=2,
-            relax_if_needed=True,
-        )
-        lead_keys = {_article_dedupe_key(article) for article in lead_personalized}
+            personalized_lead = min(8, request.per_page)
+            if request.per_page >= 6:
+                personalized_lead = min(8, max(6, personalized_lead))
 
-        lead_source_counts = {}
-        for article in lead_personalized:
-            source = _source_key(article)
-            lead_source_counts[source] = lead_source_counts.get(source, 0) + 1
+            lead_personalized = _select_with_source_cap(
+                personalized_articles,
+                max_items=personalized_lead,
+                max_per_source=2,
+                relax_if_needed=True,
+            )
+            lead_keys = {_article_dedupe_key(article) for article in lead_personalized}
 
-        filtered_general = [
-            article for article in general_articles
-            if _article_dedupe_key(article) not in lead_keys
-        ]
+            lead_source_counts = {}
+            for article in lead_personalized:
+                source = _source_key(article)
+                lead_source_counts[source] = lead_source_counts.get(source, 0) + 1
 
-        balanced_general = _select_with_source_cap(
-            filtered_general,
-            max_items=len(filtered_general),
-            max_per_source=2,
-            existing_source_counts=lead_source_counts,
-            relax_if_needed=True,
-        )
+            filtered_general = [
+                article for article in general_articles
+                if _article_dedupe_key(article) not in lead_keys
+            ]
 
-        combined = _dedupe_articles(lead_personalized + balanced_general)
-        start_idx = (request.page - 1) * request.per_page
-        end_idx = start_idx + request.per_page
-        page_articles = combined[start_idx:end_idx]
+            balanced_general = _select_with_source_cap(
+                filtered_general,
+                max_items=len(filtered_general),
+                max_per_source=2,
+                existing_source_counts=lead_source_counts,
+                relax_if_needed=True,
+            )
 
-        has_more = len(combined) > end_idx
+            combined = _dedupe_articles(lead_personalized + balanced_general)
 
-        errors = []
-        if personalized_error:
-            errors.append(personalized_result.get("message", "Personalized feed failed"))
-        if general_error:
-            errors.append(general_result.get("message", "General feed failed"))
+            errors = []
+            if personalized_error:
+                errors.append(personalized_result.get("message", "Personalized feed failed"))
+            if general_error:
+                errors.append(general_result.get("message", "General feed failed"))
 
-        live_response = {
-            "query": focus_query,
-            "count": len(combined),
-            "articles": page_articles,
-            "live_recommendations": page_articles,
-            "page": request.page,
-            "per_page": request.per_page,
-            "has_more": has_more,
-            "personalized_lead": min(personalized_lead, len(lead_personalized)),
-            "source_diversity_enabled": True,
-            "history_terms_used": history_terms,
-            "country": resolved_country,
-            "api_source": "newsdata.io",
-            "llm_categorized": True,
-            "upstream_errors": errors,
-        }
+            cache_payload = {
+                "query": focus_query,
+                "count": len(combined),
+                "all_articles": combined,
+                "articles": combined,
+                "live_recommendations": combined,
+                "page": 1,
+                "per_page": request.per_page,
+                "has_more": len(combined) > request.per_page,
+                "personalized_lead": min(personalized_lead, len(lead_personalized)),
+                "source_diversity_enabled": True,
+                "history_terms_used": history_terms,
+                "country": resolved_country,
+                "api_source": "newsdata.io",
+                "llm_categorized": True,
+                "upstream_errors": errors,
+            }
 
-        cache_payload = {
-            "query": focus_query,
-            "count": len(combined),
-            "all_articles": combined,
-            "articles": combined,
-            "live_recommendations": combined,
-            "page": 1,
-            "per_page": request.per_page,
-            "has_more": len(combined) > request.per_page,
-            "personalized_lead": min(personalized_lead, len(lead_personalized)),
-            "source_diversity_enabled": True,
-            "history_terms_used": history_terms,
-            "country": resolved_country,
-            "api_source": "newsdata.io",
-            "llm_categorized": True,
-            "upstream_errors": errors,
-        }
+            if combined:
+                _store_cached_feed(cache_key, cache_payload)
+            return cache_payload
 
-        if combined:
-            _store_cached_feed(cache_key, cache_payload)
-
-        if page_articles:
-            return live_response
-
+        # First, check if we have a cached response for this query
         cached_response = _get_cached_feed(cache_key)
+        
         if cached_response:
-            cached_errors = errors or ["Using cached feed due to upstream rate limit"]
-            return _build_cached_feed_page(cached_response, request.page, request.per_page, cached_errors)
+            # If cache exists, queue a background task to refresh it silently with full data
+            background_tasks.add_task(_fetch_and_cache_live_feed, True)
+            
+            # Serve the response from cache immediately
+            return _build_cached_feed_page(cached_response, request.page, request.per_page, cached_response.get("upstream_errors"))
 
-        return live_response
+        # If no cache exists, we must fetch live and block, but we fetch minimally for speed
+        cache_payload = await _fetch_and_cache_live_feed(is_background=False)
+        
+        # Also queue a background task to fetch the full deep cache so pagination is fast!
+        background_tasks.add_task(_fetch_and_cache_live_feed, True)
+        
+        # Build the page response
+        return _build_cached_feed_page(cache_payload, request.page, request.per_page, cache_payload.get("upstream_errors"))
     except HTTPException:
         raise
     except Exception as exc:

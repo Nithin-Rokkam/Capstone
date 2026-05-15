@@ -2,6 +2,11 @@
 
 FastAPI + React news recommender with user auth, profile/location, interests/history/bookmarks, and personalized feed ranking using live NewsData results.
 
+## New Machine Setup
+
+If you need to run this on another system with a different API key or a different database, follow:
+[RUN_ON_NEW_SYSTEM.md](RUN_ON_NEW_SYSTEM.md)
+
 ## Current Status
 
 - Live news source: NewsData API

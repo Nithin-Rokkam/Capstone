@@ -4,7 +4,8 @@ import axios from 'axios';
 import { 
   Home, Compass, History, User, LogOut, Search, 
   TrendingUp, BookmarkPlus, Eye, Clock, Settings,
-  Lock, Mail, ChevronRight, Sparkles, X, MapPin
+  Lock, Mail, ChevronRight, Sparkles, X, MapPin,
+  Heart, Share2
 } from 'lucide-react';
 import './NewDashboard.css';
 
@@ -42,6 +43,8 @@ const NewDashboard = () => {
   // History state
   const [history, setHistory] = useState([]);
   const [bookmarkedUrls, setBookmarkedUrls] = useState(new Set());
+  const [likedUrls, setLikedUrls] = useState(new Set());
+  const [toastMessage, setToastMessage] = useState('');
   
   // Profile state
   const [profileData, setProfileData] = useState({
@@ -316,6 +319,11 @@ const NewDashboard = () => {
         setSelectedInterests(parsedInterests);
       }
       fetchFeedArticles(parsedInterests, 1, false);
+    }
+
+    if (email) {
+      const savedLikes = JSON.parse(localStorage.getItem(`likedUrls_${email}`) || '[]');
+      setLikedUrls(new Set(savedLikes));
     }
 
     loadHistory(email);
@@ -671,6 +679,36 @@ const NewDashboard = () => {
     }
   };
 
+  const handleLikeToggle = (article) => {
+    if (!article?.url) return;
+    setLikedUrls((prev) => {
+      const next = new Set(prev);
+      if (next.has(article.url)) {
+        next.delete(article.url);
+      } else {
+        next.add(article.url);
+      }
+      
+      // Persist to localStorage for the current user
+      if (userEmail) {
+        localStorage.setItem(`likedUrls_${userEmail}`, JSON.stringify(Array.from(next)));
+      }
+      
+      return next;
+    });
+  };
+
+  const handleShare = async (article) => {
+    if (!article?.url) return;
+    try {
+      await navigator.clipboard.writeText(article.url);
+      setToastMessage('Link copied to share');
+      setTimeout(() => setToastMessage(''), 3000);
+    } catch (err) {
+      console.error('Failed to copy link', err);
+    }
+  };
+
   const handlePasswordChange = (e) => {
     e.preventDefault();
     if (profileData.newPassword !== profileData.confirmPassword) {
@@ -800,13 +838,29 @@ const NewDashboard = () => {
             Read Full Article
             <ChevronRight size={16} />
           </a>
-          <button
-            className="bookmark-btn"
-            onClick={() => handleBookmarkToggle(article)}
-            title={bookmarkedUrls.has(article.url) ? 'Remove bookmark' : 'Save bookmark'}
-          >
-            <BookmarkPlus size={18} />
-          </button>
+          <div className="article-actions-right">
+            <button
+              className={`icon-btn ${likedUrls.has(article.url) ? 'liked' : ''}`}
+              onClick={() => handleLikeToggle(article)}
+              title={likedUrls.has(article.url) ? 'Unlike' : 'Like'}
+            >
+              <Heart size={18} fill={likedUrls.has(article.url) ? 'currentColor' : 'none'} />
+            </button>
+            <button
+              className="icon-btn"
+              onClick={() => handleShare(article)}
+              title="Share / Open in new tab"
+            >
+              <Share2 size={18} />
+            </button>
+            <button
+              className="icon-btn"
+              onClick={() => handleBookmarkToggle(article)}
+              title={bookmarkedUrls.has(article.url) ? 'Remove bookmark' : 'Save bookmark'}
+            >
+              <BookmarkPlus size={18} />
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -1291,6 +1345,12 @@ const NewDashboard = () => {
           </div>
         )}
       </main>
+      
+      {toastMessage && (
+        <div className="toast-message">
+          {toastMessage}
+        </div>
+      )}
     </div>
   );
 };

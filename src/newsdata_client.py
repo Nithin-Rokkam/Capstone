@@ -58,6 +58,9 @@ class NewsDataClient:
         self.seen_content_hashes = set()
         self.search_sessions = {}
 
+    def _has_api_key(self) -> bool:
+        return bool((self.api_key or "").strip())
+
     def _normalize_text(self, value: str) -> str:
         cleaned = (value or "").lower().strip()
         cleaned = re.sub(r"[^a-z0-9\s]", " ", cleaned)
@@ -125,7 +128,7 @@ class NewsDataClient:
             return value
         return ""
     
-    def _calculate_similarity_score(self, query: str, title: str, description: str) -> float:
+    def _calculate_similarity_score(self, query: str, title: str, description: str, query_embedding=None, article_embedding=None) -> float:
         """Calculate similarity score using SBERT with enhanced matching"""
         try:
             title = title or ""
@@ -135,8 +138,10 @@ class NewsDataClient:
             article_text = f"{title} {description}"
             
             # Generate embeddings
-            query_embedding = self.sbert_model.encode([query])
-            article_embedding = self.sbert_model.encode([article_text])
+            if query_embedding is None:
+                query_embedding = self.sbert_model.encode([query])
+            if article_embedding is None:
+                article_embedding = self.sbert_model.encode([article_text])
             
             # Calculate cosine similarity
             similarity = cosine_similarity(query_embedding, article_embedding)[0][0]
@@ -275,6 +280,13 @@ class NewsDataClient:
         Search news using NewsData.io API with LLM categorization and relevance scoring
         """
         # Build API request
+        if not self._has_api_key():
+            return {
+                "status": "error",
+                "message": "NEWSDATA_API_KEY is missing. Set it in your environment or .env file.",
+                "articles": []
+            }
+
         resolved_category = self._normalize_category(category)
         if not resolved_category:
             resolved_category = self._resolve_category_from_interests(query, interests)
@@ -336,12 +348,11 @@ class NewsDataClient:
                     session["exhausted"] = True
                     break
 
+                valid_articles = []
                 for article in articles:
                     title = article.get("title", "")
                     description = article.get("description") or ""
                     url = article.get("link", "")
-                    published_at = article.get("pubDate", "")
-                    source = article.get("source_id", "")
                     signature = self._article_signature(title, description)
 
                     if not title or not url:
@@ -351,32 +362,49 @@ class NewsDataClient:
                         continue
                     session["seen_urls"].add(url)
                     session["seen_signatures"].add(signature)
+                    valid_articles.append(article)
 
-                    llm_category = resolved_category or self._categorize_article_with_llm(title, description, query)
-                    if isinstance(llm_category, dict):
-                        llm_category = llm_category.get("category", "general")
+                if valid_articles:
+                    query_embedding = self.sbert_model.encode([query])
+                    article_texts = [f"{a.get('title', '')} {a.get('description') or ''}" for a in valid_articles]
+                    article_embeddings = self.sbert_model.encode(article_texts)
 
-                    similarity_score = self._calculate_similarity_score(query, title, description)
-                    recency_score = self._calculate_recency_score(published_at)
-                    final_score = self._calculate_final_score(similarity_score, recency_score)
+                    for i, article in enumerate(valid_articles):
+                        title = article.get("title", "")
+                        description = article.get("description") or ""
+                        url = article.get("link", "")
+                        published_at = article.get("pubDate", "")
+                        source = article.get("source_id", "")
+                        
+                        llm_category = resolved_category or self._categorize_article_with_llm(title, description, query)
+                        if isinstance(llm_category, dict):
+                            llm_category = llm_category.get("category", "general")
 
-                    processed_article = {
-                        "title": title,
-                        "description": description,
-                        "url": url,
-                        "publishedAt": published_at,
-                        "source": source,
-                        "category": llm_category,
-                        "similarity_score": similarity_score,
-                        "recency_score": recency_score,
-                        "final_score": final_score,
-                        "api_category": article.get("category", ""),
-                        "keywords": article.get("keywords", []),
-                        "creator": article.get("creator", []),
-                        "image_url": article.get("image_url", "")
-                    }
+                        q_emb = query_embedding
+                        a_emb = article_embeddings[i:i+1]
+                        similarity_score = self._calculate_similarity_score(
+                            query, title, description, query_embedding=q_emb, article_embedding=a_emb
+                        )
+                        recency_score = self._calculate_recency_score(published_at)
+                        final_score = self._calculate_final_score(similarity_score, recency_score)
 
-                    session["articles"].append(processed_article)
+                        processed_article = {
+                            "title": title,
+                            "description": description,
+                            "url": url,
+                            "publishedAt": published_at,
+                            "source": source,
+                            "category": llm_category,
+                            "similarity_score": similarity_score,
+                            "recency_score": recency_score,
+                            "final_score": final_score,
+                            "api_category": article.get("category", ""),
+                            "keywords": article.get("keywords", []),
+                            "creator": article.get("creator", []),
+                            "image_url": article.get("image_url", "")
+                        }
+
+                        session["articles"].append(processed_article)
 
                 session["next_page"] = data.get("nextPage")
                 if not session["next_page"]:
@@ -426,6 +454,13 @@ class NewsDataClient:
     def get_top_headlines(self, category: Optional[str] = None, country: Optional[str] = None, language: str = "en", 
                          page_size: int = 20, page: int = 1) -> Dict:
         """Get top headlines from NewsData.io"""
+        if not self._has_api_key():
+            return {
+                "status": "error",
+                "message": "NEWSDATA_API_KEY is missing. Set it in your environment or .env file.",
+                "articles": []
+            }
+
         # Clear cache for fresh headlines
         self.clear_cache()
         
